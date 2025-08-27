@@ -1,3 +1,7 @@
+%{
+Older version of BICEPS. Use that code instead.
+%}
+
 close all;
 clear all;
 
@@ -353,5 +357,6 @@ for j = [1]
 end
 
 disp(j)
+
 
 
