@@ -1,6 +1,13 @@
-close all;
-clear all;
+%{
+This script generates lag distribution boxplots comparing real Purkinje cell (PC) neural activity to shuffled control data across selected behavioral features.
+For each chosen feature (e.g., positional or muscle activation predictors), the script loads previously computed “best lag” indices — the time offsets at which PC firing best aligns with the feature. 
+These indices are converted into time units (seconds) and aggregated across multiple sessions. The same process is repeated using shuffled neural data to serve as a null distribution.
+%}
 
+close all;        % Close all open figures
+clear all;        % Clear all workspace variables
+
+% --- Session identifiers (each string corresponds to one dataset) ---
 sessions = ["Dylan_210414_WT2_NPresults_short", ...
     "Dylan_210421_fChR2_NPresults_short_stim", "Dylan_210423_fChR2_NPresults_short", ...
     "Dylan_210422_fChR2_NPresults_short", "Dylan_210425_fChR2_NPresults_short", ...
@@ -15,193 +22,107 @@ sessions = ["Dylan_210414_WT2_NPresults_short", ...
     "Dylan_220519_DJC002_NPresults_short", "Dylan_220520_DJC000_NPresults_short", ...
     "Dylan_220520_DJC002_NPresults_short"];
 
+% --- Number of reaches recorded in each session ---
 reach_num = [74, 65, 62, 63, 52, 66, 54, 60, 68, 52, 73, 59, 80, 68, 71, ...
     68, 60, 53, 58, 58, 36, 70, 57, 45];
 
-model_info = ["Shoulder Elv Angle Value", "Shoulder Extension Angle Value",   ...
-    "Elbow Flex Value", "Ulna Radius Rot Value", "Wrist Angle Value", "Shoulder Elv Angle Speed",  ...
-    "Shoulder Extension Angle Speed", "Elbow Flex Speed", "Ulna Radius Rot Speed", "Wrist Angle Speed",  ...
-    "Pectoralis Clavicle Head Activation", "Biceps Short Head Activation", "Biceps Long Head Activation",   ...
-    "Deltoid A Activation", "Triceps Short Head Activation", "Triceps Long Head Activation",   ...
-    "Brachialis inner Head Activation", "Brachialis Outer Head Activation", "Anconeus Activation",   ...
-    "Deltoid M Activation", "Short Anconeus Activation", "Subscapularis SuperiorHead Activation",  ...
-    "Infraspinatus Activation", "Pronator Teres Activation", "Flexor Carpi Radialis Activation",  ...
-    "Brachioradialis  Activation", "Pectoralis Clavicle Head", "Biceps Short Head", "Biceps Long Head",  ...
-    "Deltoid A", "Triceps Short Head", "Triceps Long Head", "Brachialis inner Head", "Brachialis Outer Head",  ...
-    "Anconeus", "Deltoid M", "Short Anconeus", "Subscapularis SuperiorHead", "Infraspinatus",  ...
-    "Pronator Teres", "Flexor Carpi Radialis", "Brachioradialis"];
-Predictor_names = ["Pos X", "Pos Y", "Pos Z", "Vel", "Vel X", "Vel X Up",  ...
+% --- List of biomechanical / muscle features used as predictors ---
+model_info = ["Shoulder Elv Angle Value", "Shoulder Extension Angle Value", ...
+    "Elbow Flex Value", "Ulna Radius Rot Value", "Wrist Angle Value", ...
+    "Shoulder Elv Angle Speed", "Shoulder Extension Angle Speed", ...
+    "Elbow Flex Speed", "Ulna Radius Rot Speed", "Wrist Angle Speed", ...
+    "Pectoralis Clavicle Head Activation", "Biceps Short Head Activation", ...
+    "Biceps Long Head Activation", "Deltoid A Activation", ...
+    "Triceps Short Head Activation", "Triceps Long Head Activation", ...
+    "Brachialis inner Head Activation", "Brachialis Outer Head Activation", ...
+    "Anconeus Activation", "Deltoid M Activation", "Short Anconeus Activation", ...
+    "Subscapularis SuperiorHead Activation", "Infraspinatus Activation", ...
+    "Pronator Teres Activation", "Flexor Carpi Radialis Activation", ...
+    "Brachioradialis  Activation", "Pectoralis Clavicle Head", ...
+    "Biceps Short Head", "Biceps Long Head", "Deltoid A", ...
+    "Triceps Short Head", "Triceps Long Head", "Brachialis inner Head", ...
+    "Brachialis Outer Head", "Anconeus", "Deltoid M", "Short Anconeus", ...
+    "Subscapularis SuperiorHead", "Infraspinatus", "Pronator Teres", ...
+    "Flexor Carpi Radialis", "Brachioradialis"];
+
+% --- Kinematic predictor names (position, velocity, acceleration, displacement, etc.)
+% plus the above model_info features
+Predictor_names = ["Pos X", "Pos Y", "Pos Z", "Vel", "Vel X", "Vel X Up", ...
     "Vel X Down", "Vel Y", "Vel Y Up", "Vel Y Down", "Vel Z", "Vel Z Up", ...
     "Vel Z Down", "Acc", "Acc X", "Acc X Up", "Acc X Down", "Acc Y", ...
-    "Acc Y Up", "Acc Y Down", "Acc Z", "Acc Z Up", "Acc Z Down" "X Vel", ...
+    "Acc Y Up", "Acc Y Down", "Acc Z", "Acc Z Up", "Acc Z Down", "X Vel", ...
     "Y Vel", "Z Vel", "Vel Norm", "X Acc", "Y Acc", "Z Acc", "Acc Norm", ...
     "X Disp", "Y Disp", "Z Disp", "Disp Norm", model_info];
 
-%feat = find(strcmp(Predictor_names, "Biceps Short Head Activation"));
+% --- Create output directory for lag boxplots ---
 mkdir("C:\Lab\Elbow Data\lag_boxplots")
-all_PC_same = cell(1, length(Predictor_names));
-shuff_same    = cell(1, length(Predictor_names));
-dt = 0.01;
-min_lag = 60;
 
-%{
-for session_num = [1, 2, 3, 4, 5, 12, 14, 18, 21]
-    all_best_lags = {};       % Cell array to store transformed lags
-    
-    for feat = [1, 2, 3, 48, 68. 69]
-    %for feat = 1:length(Predictor_names)
-        load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + "\30 ms Session " + string(session_num) + " PC same", "PC_same")
-        load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + "\30 ms Session " + string(session_num) + " PC opp", "PC_opp")
-        load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + "\30 ms Session " + string(session_num) + " Non PC opp", "opp")
-        load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + "\30 ms Session " + string(session_num) + " Non PC same", "same")
+% --- Pre-allocate cell arrays to store lag data ---
+all_PC_same   = cell(1, length(Predictor_names));   % best lags for real PC data
+shuff_same    = cell(1, length(Predictor_names));   % best lags for shuffled control data
 
-        all_PC_same{feat} = (PC_same(:) - (min_lag + 1)) * dt;
-        all_PC_opp{feat}  = (PC_opp(:) - (min_lag + 1)) * dt;
-        all_same{feat}    = (same(:) - (min_lag + 1)) * dt;
-        all_opp{feat}     = (opp(:) - (min_lag + 1)) * dt;
-    end
+dt = 0.01;        % time step (s)
+min_lag = 60;     % offset used to convert indices to seconds
 
-    data_sets = {all_PC_same, all_PC_opp, all_same, all_opp};
+% -------------------------------
+% Collect lag values for selected features across sessions
+% -------------------------------
 
-    %PC SAME
-    handle = figure('units','normalized','outerposition',[0 0 1 1], 'Visible','on');
-    set(gcf,'color','w') % This makes the figure white instead of grey.
-    set(gca, 'TickLabelInterpreter', 'none')
-    data_mat = all_data_to_matrix(data_sets{1});
-    
+selected_feats = [1, 2, 48, 69];  % indices of features to analyze
+all_PC_same_combined = cell(1, length(selected_feats)); % store real PC lag data
+shuff_combined       = cell(1, length(selected_feats)); % store shuffled lag data
 
-    boxplot(data_mat, 'Labels', Predictor_names([1, 2, 3, 48, 68. 69]));
-    hold on
-
-    for j = 1:size(data_mat, 2)  % Loop through each feature (column)
-        x_jitter = 0.1 * randn(sum(~isnan(data_mat(:, j))), 1);  % Add small jitter to x-position
-        y_vals = data_mat(~isnan(data_mat(:, j)), j);            % Only non-NaN values
-        scatter(j + x_jitter, y_vals, 20, 'filled', 'MarkerFaceAlpha', 0.5); % Semi-transparent
-    end
-    
-    title("Session " + string(session_num) + " " + "PC Same Lags");
-    ylabel('Time Lag (s)');
-    xlabel("Features")
-    xtickangle(45);
-    fname = "C:\Lab\Elbow Data\lag_boxplots\30 ms Session " + string(session_num) + " PC Same Lags (scatter).png";
-    saveas(handle, fname);
-
-    %PC OPP
-    handle = figure('units','normalized','outerposition',[0 0 1 1], 'Visible','off');
-    set(gcf,'color','w') % This makes the figure white instead of grey.
-    set(gca, 'TickLabelInterpreter', 'none')
-    data_mat = all_data_to_matrix(data_sets{2});
-
-    boxplot(data_mat, 'Labels', Predictor_names);
-    hold on
-
-    for j = 1:size(data_mat, 2)  % Loop through each feature (column)
-        x_jitter = 0.1 * randn(sum(~isnan(data_mat(:, j))), 1);  % Add small jitter to x-position
-        y_vals = data_mat(~isnan(data_mat(:, j)), j);            % Only non-NaN values
-        scatter(j + x_jitter, y_vals, 20, 'filled', 'MarkerFaceAlpha', 0.5); % Semi-transparent
-    end
-
-    title("Session " + string(session_num) + " " + "PC Opp Lags");
-    ylabel('Time Lag (s)');
-    xlabel("Features")
-    xtickangle(45);
-    fname = "C:\Lab\Elbow Data\lag_boxplots\30 ms Session " + string(session_num) + " PC Opp Lags (scatter).png";
-    saveas(handle, fname);
-
-    %PC SAME
-    handle = figure('units','normalized','outerposition',[0 0 1 1], 'Visible','off');
-    set(gcf,'color','w') % This makes the figure white instead of grey.
-    set(gca, 'TickLabelInterpreter', 'none')
-    data_mat = all_data_to_matrix(data_sets{3});
-
-    boxplot(data_mat, 'Labels', Predictor_names);
-    hold on
-    
-    for j = 1:size(data_mat, 2)  % Loop through each feature (column)
-        x_jitter = 0.1 * randn(sum(~isnan(data_mat(:, j))), 1);  % Add small jitter to x-position
-        y_vals = data_mat(~isnan(data_mat(:, j)), j);            % Only non-NaN values
-        scatter(j + x_jitter, y_vals, 20, 'filled', 'MarkerFaceAlpha', 0.5); % Semi-transparent
-    end
-
-    title("Session " + string(session_num) + " " + "Non PC Same Lags");
-    ylabel('Time Lag (s)');
-    xlabel("Features")
-    xtickangle(45);
-    fname = "C:\Lab\Elbow Data\lag_boxplots\30 ms Session " + string(session_num) + " Non PC Same Lags (scatter).png";
-    saveas(handle, fname);
-
-    %PC SAME
-    handle = figure('units','normalized','outerposition',[0 0 1 1], 'Visible','off');
-    set(gcf,'color','w') % This makes the figure white instead of grey.
-    set(gca, 'TickLabelInterpreter', 'none')
-    data_mat = all_data_to_matrix(data_sets{4});
-
-    boxplot(data_mat, 'Labels', Predictor_names);
-    hold on
-
-    for j = 1:size(data_mat, 2)  % Loop through each feature (column)
-        x_jitter = 0.1 * randn(sum(~isnan(data_mat(:, j))), 1);  % Add small jitter to x-position
-        y_vals = data_mat(~isnan(data_mat(:, j)), j);            % Only non-NaN values
-        scatter(j + x_jitter, y_vals, 20, 'filled', 'MarkerFaceAlpha', 0.5); % Semi-transparent
-    end
-
-    title("Session " + string(session_num) + " " + "Non PC Opp Lags");
-    ylabel('Time Lag (s)');
-    xlabel("Features")
-    xtickangle(45);
-    fname = "C:\Lab\Elbow Data\lag_boxplots\30 ms Session " + string(session_num) + " Non PC Opp Lags (scatter).png";
-    saveas(handle, fname);
-end
-
-%}
-selected_feats = [1, 2, 48, 69];
-all_PC_same_combined = cell(1, length(selected_feats));
-shuff_combined    = cell(1, length(selected_feats));
-
-
+% --- Loop through real data sessions and collect PC_same lags ---
 for session_num = [1, 2, 3, 4, 12, 14, 18, 21]
     for idx = 1:length(selected_feats)
         feat = selected_feats(idx);
 
-        load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + "\30 ms Session " + string(session_num) + " PC same", "PC_same")
+        % Load previously computed best lags for this feature and session
+        load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + ...
+             "\30 ms Session " + string(session_num) + " PC same", "PC_same")
 
-        % Transform lags to seconds
+        % Convert lag indices to time (seconds)
         PC_same_lags = (PC_same(:) - (min_lag + 1)) * dt;
 
-        % Append to combined data
+        % Append to combined dataset
         all_PC_same_combined{idx} = [all_PC_same_combined{idx}; PC_same_lags];
     end
 end
 
+% --- Loop through shuffled datasets for comparison ---
 for session_num = [1, 2, 3, 4, 12, 14, 18, 21]
     for iter = 1:10
         for idx = 1:length(selected_feats)
             feat = selected_feats(idx);
 
-            load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + "\shuff " + string(iter) + "Session " + string(session_num) + " PC same", "PC_same")
+            % Load best lags from shuffled neural data
+            load("C:\Lab\Elbow Data\Best Lags\" + string(Predictor_names(feat)) + ...
+                 "\shuff " + string(iter) + "Session " + string(session_num) + " PC same", "PC_same")
 
-            % Transform lags to seconds
-            shuff_lags    = (PC_same(:)    - (min_lag + 1)) * dt;
+            % Convert lag indices to time
+            shuff_lags = (PC_same(:) - (min_lag + 1)) * dt;
 
-            % Append to combined data
-            shuff_combined{idx}    = [shuff_combined{idx}; shuff_lags];
+            % Append to shuffled dataset
+            shuff_combined{idx} = [shuff_combined{idx}; shuff_lags];
         end
     end
 end
 
-data_sets = {all_PC_same_combined, shuff_combined};
-selected_feats = [1, 2, 48, 69];
+% -------------------------------
+% Plot boxplots comparing real vs shuffled lag distributions
+% -------------------------------
 
-% Create figure
+data_sets = {all_PC_same_combined, shuff_combined};
+
 handle = figure('units','normalized','outerposition',[0 0 1 1], 'Visible','on');
 set(gcf, 'Color', 'w');
 set(gca, 'TickLabelInterpreter', 'none');
 
-% --- PC Same
+% --- Top subplot: real PC lags ---
 subplot(2, 1, 1)
 hold on
-data_mat = all_data_to_matrix(data_sets{1});
-boxplot(data_mat, 'Labels', selected_feats);
+data_mat = all_data_to_matrix(data_sets{1});   % convert cell array to matrix
+boxplot(data_mat, 'Labels', selected_feats);   % plot boxplots
 title("PC Lags", FontSize=22);
 ylabel('Time Lag (s)', FontSize=18);
 ylim([-0.5, 0.5])
@@ -209,7 +130,7 @@ xlabel("Feature Index", FontSize=18)
 xtickangle(45);
 set(gca, 'FontSize', 14)
 
-% --- Non-PC Same
+% --- Bottom subplot: shuffled lag controls ---
 subplot(2, 1, 2)
 hold on
 data_mat = all_data_to_matrix(data_sets{2});
@@ -221,17 +142,20 @@ xlabel("Feature Index", FontSize=18)
 xtickangle(45);
 set(gca, 'FontSize', 14)
 
+% Save figures to thesis folder
 filename = ("C:\Lab\Elbow Data\thesis_figs\lag corr.svg");
 saveas(handle, filename)
-
 filename = ("C:\Lab\Elbow Data\thesis_figs\lag corr.png");
 saveas(handle, filename)
 
+% -------------------------------
+% Helper function: convert cell array of vectors to padded matrix
+% -------------------------------
 function M = all_data_to_matrix(cell_data)
-max_len = max(cellfun(@numel, cell_data));
-M = NaN(max_len, numel(cell_data));
-for i = 1:numel(cell_data)
-    len = numel(cell_data{i});
-    M(1:len, i) = cell_data{i};
-end
+    max_len = max(cellfun(@numel, cell_data));     % find maximum length
+    M = NaN(max_len, numel(cell_data));            % preallocate with NaNs
+    for i = 1:numel(cell_data)
+        len = numel(cell_data{i});
+        M(1:len, i) = cell_data{i};                % fill each column
+    end
 end
