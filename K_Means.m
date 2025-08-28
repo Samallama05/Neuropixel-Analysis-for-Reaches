@@ -1,3 +1,8 @@
+%{
+This code clusters the neural or kinematic data into desired numbers of clusters to separate any trends. The split data (neural or kinematic), is plotted alongside the associated neural or kinematic data to visualize any
+trends of neural activity vs feature behaviour. Cells and features were selected according to their best correlations RMSE correlation. Ideal lags were also chosen accordingly.
+%}
+
 close all;
 clear all;
 
@@ -165,3 +170,4 @@ sgtitle("Session " + string(session_num) + ", Cell " + string(cell) + ", Lag " +
 filename = "C:\Lab\Elbow Data\K means\" + Predictor_names(feat) + "\Session " + string(session_num) + ", Cell " + string(cell) + ".png";
 saveas(handle, filename)
 %}
+
