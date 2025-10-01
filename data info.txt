@@ -1,0 +1,21 @@
+Files
+
+Best Lags:
+Each sessions best lags per cell of type. The cell types are split by PC and non PC cells, and also by mirrored or reflected cell and kinematic activity.
+https://olucdenver-my.sharepoint.com/:u:/g/personal/sama_kasmani_ucdenver_edu/EWF3GaZfro9NqoWQ3pAWvGYBHlvQHSznlz0yw3mKA7gf0w?e=UuW3cw
+
+Sorted Data:
+The data sorted into reach windows and aligned with kinematic data. Created in biceps script. 
+https://olucdenver-my.sharepoint.com/:u:/g/personal/sama_kasmani_ucdenver_edu/EeK3G6Dvzg1OnU6-zRu1l8YBoIX_HYbHZXxia96NPI1XEg?e=Ayro2s
+
+Corrs:
+All correlations at all lag points between features and neural data. RMSE dictates the strength of the correlation. Pearson corr is to determine a direct or indirect correlation
+https://olucdenver-my.sharepoint.com/:u:/g/personal/sama_kasmani_ucdenver_edu/EWNSBuyvCpFAuFXfiXr6KF8B6Dokf44kQnwWUn6aXr0gjA?e=GzhEJg
+
+Muscle solutions:
+The sto files produced by moco with feature information for all reaches
+https://olucdenver-my.sharepoint.com/:u:/g/personal/sama_kasmani_ucdenver_edu/EU0hcpAQ0DJAplkYWn0d1iABEbAgaeEs-PTCQ3RueMw81g?e=ItTvis
+
+Shuffled Data:
+Shuffled neural data to serve as a control for correlations
+https://olucdenver-my.sharepoint.com/:u:/g/personal/sama_kasmani_ucdenver_edu/ERk4TzUyfNlIqA1KUpqaTNwBcqBTmPdiNvlDRGgYI4nEHw?e=grMmSp
